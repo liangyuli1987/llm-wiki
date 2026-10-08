@@ -26,6 +26,12 @@ else
   log_fail "scripts/llm-wiki-session compiles" "py_compile failed"
 fi
 
+if python3 "$SCRIPT_DIR/test-session-promotion.py"; then
+  log_pass "promotion notes preserve frontmatter and multiline content"
+else
+  log_fail "promotion notes preserve frontmatter and multiline content" "promotion regression"
+fi
+
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 hub="$tmpdir/wiki"
@@ -226,12 +232,6 @@ if python3 "$SCRIPT_DIR/test-session-frontmatter.py"; then
   log_pass "session frontmatter preserves scalar values across rewrites"
 else
   log_fail "session frontmatter preserves scalar values across rewrites" "round-trip regression"
-fi
-
-if python3 "$SCRIPT_DIR/test-session-promotion.py"; then
-  log_pass "promotion notes preserve frontmatter and multiline content"
-else
-  log_fail "promotion notes preserve frontmatter and multiline content" "promotion regression"
 fi
 
 echo ""
