@@ -56,7 +56,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "rehydrate": {
         "session_start": True,
-        "user_prompt": True,
+        "user_prompt": False,
         "strict": False,
     },
     "raw_transcripts": False,
@@ -80,7 +80,7 @@ BALANCED_CONFIG = {
     },
     "rehydrate": {
         "session_start": True,
-        "user_prompt": True,
+        "user_prompt": False,
         "strict": False,
     },
     "raw_transcripts": False,

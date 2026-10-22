@@ -118,7 +118,7 @@ Same structure as a topic wiki but at `<project>/.wiki/`. Add `.wiki/` to `.giti
 6. **Incremental by default.** Only compile new sources unless explicitly asked for full recompile.
 7. **Honest gaps.** If the wiki doesn't have the answer, say so. Suggest what to ingest.
 8. **Multi-wiki peek.** When querying, answer from the target wiki, then peek at sibling wiki `_index.md` files for overlap.
-9. **Confidence scoring.** Articles get `confidence: high|medium|low` in frontmatter based on source quality.
+9. **Confidence scoring.** Articles get `confidence: high|medium-high|medium|medium-low|low` in frontmatter based on source quality.
 10. **Archive is quiet preservation.** Archived topic wikis move to
 `HUB/topics/.archive/<slug>/`, remain structurally maintainable, and stay out of
 normal query/compile/research/collect/output context unless explicitly included. Deep
@@ -233,7 +233,7 @@ created: YYYY-MM-DD
 updated: YYYY-MM-DD
 tags: [tag1, tag2]
 aliases: [alternate names]
-confidence: high|medium|low
+confidence: high|medium-high|medium|medium-low|low
 summary: "2-3 sentence summary"
 ---
 ```

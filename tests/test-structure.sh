@@ -176,7 +176,7 @@ while IFS= read -r -d '' file; do
   bn=$(basename "$file")
   conf_val=$(grep "^confidence:" "$file" | head -1 | sed 's/confidence: *//')
   case "$conf_val" in
-    high|medium|low) log_pass "valid confidence '$conf_val' in $bn" ;;
+    high|medium-high|medium|medium-low|low) log_pass "valid confidence '$conf_val' in $bn" ;;
     *) log_fail "invalid confidence '$conf_val' in $bn" "C2 violation" ;;
   esac
 done < <(find "$GOLDEN/wiki" -name "*.md" -not -name "_index.md" -print0)

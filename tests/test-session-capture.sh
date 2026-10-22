@@ -211,6 +211,13 @@ else
   log_fail "balanced SessionStart hook emits additionalContext" "$session_start_output"
 fi
 
+user_prompt_output="$(printf '{"session_id":"test-session","hook_event_name":"UserPromptSubmit","cwd":"%s"}' "$PWD" | "$SESSION" --hub "$hub" hook --harness codex --if-enabled 2>&1)"
+if ! grep -q 'additionalContext' <<<"$user_prompt_output"; then
+  log_pass "balanced UserPromptSubmit keeps the prompt prefix unchanged"
+else
+  log_fail "balanced UserPromptSubmit repeated rehydration context" "$user_prompt_output"
+fi
+
 promote_output="$("$SESSION" --hub "$hub" promote codex:test-session --topic demo 2>&1)"
 if [ -f "$promote_output" ] \
   && grep -q 'Session Digest Promotion: codex:test-session' "$promote_output" \

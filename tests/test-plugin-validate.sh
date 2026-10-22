@@ -352,26 +352,21 @@ OPENCODE_PLUGIN="$PROJECT_ROOT/plugins/llm-wiki-opencode"
 OPENCODE_SKILL="$OPENCODE_PLUGIN/skills/wiki-manager"
 OPENCODE_QUERY_SKILL="$OPENCODE_PLUGIN/skills/wiki-query"
 
-# References symlink
+# Copied references
 echo ""
-echo "--- OpenCode references symlink ---"
-OC_REFS_LINK="$OPENCODE_SKILL/references"
-if [ -L "$OC_REFS_LINK" ]; then
-  log_pass "OpenCode references is a symlink"
-  if [ -e "$OC_REFS_LINK" ]; then
-    log_pass "OpenCode references symlink resolves"
-    for ref in $REFERENCE_NAMES; do
-      if [ -f "$OC_REFS_LINK/${ref}.md" ]; then
-        log_pass "OpenCode references/$ref.md reachable via symlink"
-      else
-        log_fail "OpenCode references/$ref.md not reachable via symlink" "broken target"
-      fi
-    done
-  else
-    log_fail "OpenCode references symlink target does not exist" "$(readlink "$OC_REFS_LINK")"
-  fi
+echo "--- OpenCode references copy ---"
+OC_REFS="$OPENCODE_SKILL/references"
+if [ -d "$OC_REFS" ] && [ ! -L "$OC_REFS" ]; then
+  log_pass "OpenCode references directory exists"
+  for ref in $REFERENCE_NAMES; do
+    if [ -f "$OC_REFS/${ref}.md" ]; then
+      log_pass "OpenCode references/$ref.md exists"
+    else
+      log_fail "OpenCode references/$ref.md missing" "generated copy is incomplete"
+    fi
+  done
 else
-  log_fail "OpenCode references is not a symlink" "expected symlink to claude-plugin source"
+  log_fail "OpenCode references is not a copied directory" "standalone packages cannot resolve relative links"
 fi
 
 # OpenCode SKILL.md
