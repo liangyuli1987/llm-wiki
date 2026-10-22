@@ -90,12 +90,12 @@ Requires `ANTHROPIC_API_KEY`. Costs ~$2-5 per run.
 - **Added a new command**: add a frontmatter check to `test-plugin-validate.sh` if it's not picked up by the wildcard. Add a behavioral eval in `promptfooconfig.yaml` for routing.
 - **Changed user-facing command docs or versions**: update README command rows and all plugin/marketplace manifest versions together, then run `test-docs-consistency.sh`.
 - **Changed the fuzzy router**: add or update test cases in `promptfooconfig.yaml` covering the new routing behavior plus negative controls.
-- **Added a new reference file**: `test-plugin-validate.sh` has three `for ref in ...` loops (Claude-side existence, Codex-side copied-reference validation, OpenCode-side symlink reachability) — add the new filename to all three.
+- **Added a new reference file**: `test-plugin-validate.sh` has three `for ref in ...` loops (Claude-side existence plus Codex/OpenCode copied-reference validation) — add the new filename to all three.
 - **Changed `scripts/llm-wiki`**: run both plugin sync scripts so the bundled
   `bin/llm-wiki` copies for Claude, Codex, and OpenCode match the source helper.
 - **Changed `references/query-lite.md`**: run `scripts/sync-query-lite-profile.sh`, `scripts/sync-codex-plugin.sh`, and `scripts/sync-opencode-plugin.sh`, then run `tests/test-query-lite-sync.sh` and the two mirror sync tests.
 - **Changed directory structure** (new `raw/` or `wiki/` subdirectory): update `test-structure.sh` C1 directory list and C11 placement checks. Update the golden wiki fixture if needed.
-- **Edited `claude-plugin/skills/wiki-manager/`**: both `test-codex-sync.sh` and `test-opencode-sync.sh` will fail until you re-run both sync scripts and commit `plugins/`. Never edit `plugins/llm-wiki/` or `plugins/llm-wiki-opencode/` by hand — they are generated. Codex gets copied references for marketplace caching; OpenCode keeps a symlink into the Claude source.
+- **Edited `claude-plugin/skills/wiki-manager/`**: both `test-codex-sync.sh` and `test-opencode-sync.sh` will fail until you re-run both sync scripts and commit `plugins/`. Never edit `plugins/llm-wiki/` or `plugins/llm-wiki-opencode/` by hand — they are generated. Both targets get copied references so cached packages and raw GitHub URLs remain self-contained.
 - **Added a runtime-specific text rewrite to a sync script**: update the corresponding sync script's SKILL.md replacement list. References are runtime-neutral and shared verbatim — do not add per-file replacements there.
 - **Changed Codex install docs or bootstrap flow**: run `./tests/test-codex-runtime.sh` to verify a user-scoped install materializes the plugin cache, resolves `@wiki`, and installs `$wiki-query` as explicit-only from a clean scratch Codex home without an interactive `/plugins` step. Codex 0.144 reads plugin enablement from user config, not project config; the test also guards the unsupported project-scope path.
 
@@ -129,7 +129,7 @@ plugins/llm-wiki/               — generated Codex packaging mirror (do NOT han
 plugins/llm-wiki-opencode/      — generated OpenCode packaging mirror (do NOT hand-edit)
   skills/wiki-manager/
     SKILL.md                    — patched copy of claude-plugin SKILL.md
-    references → ../../../../claude-plugin/skills/wiki-manager/references  (symlink)
+    references/*.md             — copied from claude-plugin/skills/wiki-manager/references
   README.md                     — OpenCode install instructions
   skills/wiki-query/SKILL.md    — best-effort compact read-only preset
 profiles/query-lite/SKILL.md    — portable generated read-only query profile

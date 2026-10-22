@@ -26,6 +26,12 @@ else
   log_fail "scripts/llm-wiki-session compiles" "py_compile failed"
 fi
 
+if python3 "$SCRIPT_DIR/test-session-promotion.py"; then
+  log_pass "promotion notes preserve frontmatter and multiline content"
+else
+  log_fail "promotion notes preserve frontmatter and multiline content" "promotion regression"
+fi
+
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 hub="$tmpdir/wiki"
@@ -205,6 +211,13 @@ else
   log_fail "balanced SessionStart hook emits additionalContext" "$session_start_output"
 fi
 
+user_prompt_output="$(printf '{"session_id":"test-session","hook_event_name":"UserPromptSubmit","cwd":"%s"}' "$PWD" | "$SESSION" --hub "$hub" hook --harness codex --if-enabled 2>&1)"
+if ! grep -q 'additionalContext' <<<"$user_prompt_output"; then
+  log_pass "balanced UserPromptSubmit keeps the prompt prefix unchanged"
+else
+  log_fail "balanced UserPromptSubmit repeated rehydration context" "$user_prompt_output"
+fi
+
 promote_output="$("$SESSION" --hub "$hub" promote codex:test-session --topic demo 2>&1)"
 if [ -f "$promote_output" ] \
   && grep -q 'Session Digest Promotion: codex:test-session' "$promote_output" \
@@ -215,11 +228,23 @@ else
   log_fail "promote creates topic raw note and index topic tag" "$promote_output"
 fi
 
+if python3 "$SCRIPT_DIR/test-session-promotion-records.py"; then
+  log_pass "promotion records stay in sync with session digest frontmatter"
+else
+  log_fail "promotion records stay in sync with session digest frontmatter" "regression test failed"
+fi
+
 list_output="$("$SESSION" --hub "$hub" list --json 2>&1)"
 if python3 -c 'import json,sys; data=json.load(sys.stdin); assert any(s.get("llm_wiki_session_id") == "codex:test-session" for s in data["sessions"])' <<<"$list_output"; then
   log_pass "list --json reports captured session"
 else
   log_fail "list --json reports captured session" "$list_output"
+fi
+
+if python3 "$SCRIPT_DIR/test-session-frontmatter.py"; then
+  log_pass "session frontmatter preserves scalar values across rewrites"
+else
+  log_fail "session frontmatter preserves scalar values across rewrites" "round-trip regression"
 fi
 
 echo ""

@@ -323,10 +323,13 @@ Every wiki operation appends to `log.md` in the wiki root. Format: `## [YYYY-MM-
 
 ## Confidence Scoring
 
-Wiki articles include a `confidence` field in frontmatter: `high`, `medium`, or `low`.
+Wiki articles use a five-point `confidence` field in frontmatter: `high`,
+`medium-high`, `medium`, `medium-low`, or `low`.
 
 - **high**: Multiple peer-reviewed sources agree, well-established knowledge
+- **medium-high**: Strong evidence with a minor gap in replication, independence, or scope
 - **medium**: Single source, or sources partially agree, or recent findings not yet replicated
+- **medium-low**: Limited or conflicting evidence with some credible support
 - **low**: Anecdotal, single non-peer-reviewed source, or sources disagree
 
 When answering queries, note confidence levels. When linting, flag `low` confidence articles for review.

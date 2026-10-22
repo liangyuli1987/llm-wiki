@@ -422,7 +422,7 @@ created: YYYY-MM-DD
 updated: YYYY-MM-DD
 tags: [tag1, tag2]
 aliases: [alternate names for Obsidian discovery]
-confidence: high|medium|low
+confidence: high|medium-high|medium|medium-low|low
 volatility: hot|warm|cold
 verified: YYYY-MM-DD
 compiled-from: sources|conversation|mixed   # optional; defaults to "sources"

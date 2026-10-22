@@ -59,6 +59,7 @@ private verified receipts, and content-free terminal reporting.
 
 **Claude Code** (native plugin):
 ```bash
+claude plugin marketplace add nvk/llm-wiki
 claude plugin install wiki@llm-wiki
 ```
 

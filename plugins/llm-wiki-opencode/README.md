@@ -97,5 +97,6 @@ The [opencode-agent-skills](https://github.com/joshuadavidthomas/opencode-agent-
 
 Do not edit generated skill files here by hand. Run
 `scripts/sync-opencode-plugin.sh` to regenerate them from the Claude source.
-The `references/` directory is a symlink into
-`claude-plugin/skills/wiki-manager/references/`.
+The `references/` directory is copied from
+`claude-plugin/skills/wiki-manager/references/` so standalone packages and raw
+GitHub URLs can resolve relative reference links.

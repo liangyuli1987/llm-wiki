@@ -81,7 +81,7 @@ Recommendation: update sources 2, retract source 3
 On user selection:
 - **skip**: No changes. Update `verified` date to today (human confirmed it's still accurate).
 - **update**: Re-ingest the changed source (overwrite the raw file with new content, preserve frontmatter), then recompile the article following the standard compilation protocol.
-- **flag**: Degrade the article's `confidence` by one level (high→medium, medium→low). Add a note to the article body: `> ⚠️ Some sources for this article may have changed since last verification. Run /wiki:refresh to update.`
+- **flag**: Degrade the article's `confidence` by one level (high→medium-high→medium→medium-low→low). Add a note to the article body: `> ⚠️ Some sources for this article may have changed since last verification. Run /wiki:refresh to update.`
 - **retract**: Route to `/wiki:retract` for the unreachable source.
 
 After all actions, update the article's `verified` date to today.
