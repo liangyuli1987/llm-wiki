@@ -9,7 +9,7 @@
 
 [llm-wiki.net](https://llm-wiki.net/) · [@LLMWIKI on X](https://x.com/LLMWIKI) · [github.com/nvk/llm-wiki](https://github.com/nvk/llm-wiki)
 
-LLM-compiled knowledge bases for any AI agent. Capture rough Ideas, research and shape them, then explicitly promote approved briefs into delivery Projects. Also includes parallel research, collector catalogs, session memory, source ingestion, compilation, audits, querying, and artifact generation. Ships for Claude Code, OpenAI Codex, OpenCode, and portable agents. Obsidian-compatible.
+LLM-compiled knowledge bases for any AI agent. Capture rough Ideas, research and shape them, then explicitly promote approved briefs into delivery Projects. Also includes parallel research, collector catalogs, session memory, source ingestion, compilation, audits, querying, and artifact generation. Ships for Claude Code, OpenAI Codex, DeepSeek Harness, OpenCode, and portable agents. Obsidian-compatible.
 
 ---
 
@@ -18,6 +18,14 @@ LLM-compiled knowledge bases for any AI agent. Capture rough Ideas, research and
 ---
 
 ## Changelog
+
+**v1.0.0** — **Stable identity, honest provenance, and five-runtime packaging.**
+Adds stable `wiki_id` registry checks and engine declarations, actionable raw
+coverage ownership, footnote/wiki-link integrity, safe nested raw namespaces,
+immutable refresh revisions with human-only verification, pinned Git
+manifest-only ingestion, native DeepSeek Harness skills, and Windows Codex
+hooks. The major version marks these provenance and identity contracts as the
+supported baseline without making existing optional fields mandatory.
 
 **v0.25.0** — **Portable multi-runtime reliability.** Adds configurable
 `llm-wiki lint --fail-on critical|warning|suggestion` exit gates, portable
@@ -49,11 +57,6 @@ workflow.
 keeps the session-hook compatibility fix. Provider-specific workflow material
 from that line is superseded in current source by manifest-driven routing and
 lives only in the corresponding private adapter.
-
-**v0.20.0** — **Governed remote writes.** Extends private adapters with exact
-remote-resource allowlists, declared read/write effects, explicit approval
-bound to an exact plan hash, expected revisions, stable idempotency keys,
-private verified receipts, and content-free terminal reporting.
 
 ## Install
 
@@ -115,6 +118,24 @@ Troubleshooting:
 - `@wiki` is the full research and maintenance entry point. Natural-language wiki requests can still auto-activate it.
 - Restart Codex after changing config if an existing session does not pick up the new plugin state.
 - If you run Codex under a sandbox wrapper like `nono`, see [Nono Sandbox Permissions](#nono-sandbox-permissions) — Codex needs r+w to `$HOME/.codex` for plugin install.
+- On Windows, the plugin's bundled `commandWindows` hooks use a `.cmd` launcher
+  and accept PowerShell UTF-16 JSON. No separate hook script setup is required.
+
+**DeepSeek Harness** (native filesystem skill):
+
+From a local checkout:
+
+```bash
+./scripts/install-deepseek-harness.sh --verify
+# Start DeepSeek Harness and invoke /wiki
+```
+
+The installer copies a self-contained skill to
+`${DSH_HOME:-$HOME/.dsh}/skills/wiki`, the documented user skill root. Harness
+support intentionally uses the narrow filesystem-skill contract rather than a
+custom runtime plugin while DeepSeek Harness remains in developer preview.
+Session hooks are optional and can use the harness's official Codex-hook bridge
+separately.
 
 **OpenCode** (instruction file):
 
@@ -219,6 +240,7 @@ Claude Code is the principal user. Keep one shared behavior layer and thin packa
 - `claude-plugin/skills/wiki-manager/references/query-lite.md` is the canonical read-only query protocol.
 - `profiles/query-lite/SKILL.md` and generated `wiki-query` skills expose that protocol without the full research context.
 - `plugins/llm-wiki-opencode/` is the OpenCode and Pi packaging target.
+- `plugins/llm-wiki-dsh/` is the generated DeepSeek Harness filesystem-skill target.
 - `.agents/plugins/marketplace.json` makes the Codex plugin installable from this repo.
 - `AGENTS.md` is the portable single-file protocol for any other LLM agent.
 
@@ -227,20 +249,22 @@ Claude Code is the principal user. Keep one shared behavior layer and thin packa
 | Client | Read-only query path | Full research path | Validation |
 |--------|----------------------|--------------------|------------|
 | Claude Code | `/wiki:query` command plus shared query protocol | Native plugin skill and commands | Deterministic fixtures plus live Sonnet/Opus runs |
-| Codex | Explicit-only `$wiki-query` (~2.8 KB) | `@wiki` (~11.7 KB before lazy references) | Deterministic fixtures plus app-server live runs |
+| Codex | Explicit-only `$wiki-query` (~2.8 KB) | `@wiki` (~14.5 KB before lazy references) | Deterministic fixtures plus app-server live runs |
 | Pi / DS4 | `scripts/pi-wiki-query`, or the isolated DS4 launcher, with read-only tools (~2.8 KB profile) | `pi --skill .../wiki-manager/SKILL.md` | Deterministic fixtures plus exact DS4 provider-payload measurement |
-| OpenCode | `wiki-query/SKILL.md` (~2.8 KB) | `wiki-manager/SKILL.md` (~25.2 KB) | Static budgets and generated-package sync; live model is best effort |
-| Any agent | Copy `profiles/query-lite/SKILL.md` (~2.8 KB) | Copy root `AGENTS.md` (~51.2 KB) | Static budgets |
+| OpenCode | `wiki-query/SKILL.md` (~2.8 KB) | `wiki-manager/SKILL.md` (~30.0 KB) | Static budgets and generated-package sync; live model is best effort |
+| DeepSeek Harness | Load `/wiki` and request a read-only query | `/wiki` from `~/.dsh/skills/wiki` | Generated-package sync plus isolated install verification |
+| Any agent | Copy `profiles/query-lite/SKILL.md` (~2.8 KB) | Copy root `AGENTS.md` (~62.2 KB) | Static budgets |
 
 Sizes are checked-in UTF-8 bytes, not provider token estimates. Use query mode
 for lookups, evidence checks, lists, and inventory status. Use the full profile
 for research, ingestion, compilation, lint fixes, or any workflow that writes.
 
-Both runtime mirrors are generated, not hand-maintained. Rebuild from the Claude source of truth:
+Runtime mirrors are generated, not hand-maintained. Rebuild from the Claude source of truth:
 
 ```bash
 ./scripts/sync-codex-plugin.sh      # regenerates plugins/llm-wiki/
 ./scripts/sync-opencode-plugin.sh   # regenerates plugins/llm-wiki-opencode/
+./scripts/sync-dsh-plugin.sh        # regenerates plugins/llm-wiki-dsh/
 ./scripts/sync-query-lite-profile.sh # regenerates profiles/query-lite/
 ```
 
@@ -251,7 +275,9 @@ Each sync script:
 - generates compact `wiki-query` packages from the canonical query-lite reference
 - (Codex only) recreates `agents/openai.yaml` for Codex UI metadata and syncs the plugin version
 
-Drift is caught by `./tests/test-codex-sync.sh` and `./tests/test-opencode-sync.sh`, which run the sync scripts and fail (with self-healing fix instructions) if the generated directories differ from `HEAD`.
+Drift is caught by `./tests/test-codex-sync.sh`,
+`./tests/test-opencode-sync.sh`, and `./tests/test-dsh-sync.sh`, which run the
+sync scripts and fail if generated packages differ from the source of truth.
 
 Practical rule: design workflows first for Claude commands and behavior, but keep the underlying knowledge model and references runtime-neutral. Runtime wrappers adapt invocation and metadata, not wiki logic.
 
@@ -383,6 +409,11 @@ codex plugin add wiki@llm-wiki
 curl -sL https://raw.githubusercontent.com/nvk/llm-wiki/master/plugins/llm-wiki-opencode/skills/wiki-manager/SKILL.md > ~/.config/opencode/AGENTS.md
 ```
 
+**DeepSeek Harness** — from an updated checkout:
+```bash
+./scripts/install-deepseek-harness.sh --verify
+```
+
 **AGENTS.md** — just pull the latest and replace:
 ```bash
 curl -sL https://raw.githubusercontent.com/nvk/llm-wiki/master/AGENTS.md > ~/your-project/AGENTS.md
@@ -418,8 +449,10 @@ Check your installed version:
 /wiki add https://example.com/article             # Fuzzy router detects URL → ingest
 /wiki what do we know about CRISPR?               # Fuzzy router detects question → query
 /wiki:ingest https://example.com/article          # Manually ingest a source
+/wiki:ingest https://example.com/news --type articles --raw-subdir news/daily  # Keep a typed source in a nested namespace
 /wiki:ingest --inbox                              # Process files dropped in inbox/
 /wiki:ingest-collection https://github.com/bitcoin/bips --wiki bitcoin  # Bulk import spec repos
+/wiki:ingest-collection /path/to/repo --adapter git --manifest-only --revision v2.0  # Pin paths/blob SHAs without child copies
 /wiki:ingest-collection https://dump.bitcoin.it/dump_20260429_en.xml.bz2 --wiki bitcoin  # Import MediaWiki dumps
 /wiki:ingest-collection messages.csv --adapter csv-messages --wiki bitcoin  # Split message archives
 /wiki:ingest-collection "https://example.com/*" --adapter wayback-cdx --from 20100101 --to 20200101  # Import archived snapshots
@@ -442,6 +475,7 @@ Check your installed version:
 /wiki:checkpoint verify docs/knowledge/my-project # Recheck hashes and the privacy attestation
 /wiki:assess /path/to/my-app --wiki nutrition     # Gap analysis: repo vs wiki vs market
 /wiki:lint --fix                                  # Clean up inconsistencies
+scripts/llm-wiki identity status --wiki nutrition # Check stable config/registry identity
 ```
 
 When working from this repository checkout, you can also run deterministic
@@ -548,10 +582,12 @@ for the storage layout, privacy defaults, capture modes, and adapter contract.
 | `/wiki init <name>` | Create a topic wiki at `~/wiki/topics/<name>/` |
 | `/wiki init <name> --local` | Create a project-local wiki at `.wiki/` |
 | `/wiki:ingest <source>` | Ingest a URL, file path, PDF, or quoted text |
+| `/wiki:ingest <source> --raw-subdir <path>` | Keep a source in a nested namespace below its declared top-level raw type |
 | `/wiki:ingest --inbox` | Process all files in the topic wiki's inbox/ |
 | `/wiki:ingest-collection <source>` | Bulk-ingest Git doc repos, BIP-style proposal sets, MediaWiki dumps/API sites, message archives, or Wayback CDX snapshots |
 | `/wiki:ingest-collection <source> --adapter git\|mediawiki-dump\|mediawiki-api\|csv-messages\|wayback-cdx` | Force a collection adapter |
 | `/wiki:ingest-collection <source> --limit <N> --dry-run` | Preview or cap a large collection import |
+| `/wiki:ingest-collection <git-source> --manifest-only --revision <ref>` | Pin filtered Git paths and blob SHAs in one immutable manifest without copying child bodies |
 | `/wiki:adapter add <local-path>` | Register an existing explicitly trusted private adapter checkout; never clones or publishes it |
 | `/wiki:adapter list\|show\|doctor` | Inspect registrations and verify manifest/executable handshakes |
 | `/wiki:adapter run <id> --request <json>` | Execute a scoped v1 request and verify artifacts without automatic wiki import; remote writes additionally require an exact approved plan hash and private verified receipt |
@@ -619,6 +655,8 @@ for the storage layout, privacy defaults, capture modes, and adapter contract.
 | `/wiki:lint` | Run health checks on the wiki |
 | `/wiki:lint --fix` | Auto-fix structural issues |
 | `/wiki:lint --deep` | Web-verify facts and suggest improvements |
+| `scripts/llm-wiki lint [path] --fail-on <level> --strict-engine` | Gate deterministic lint on severity and optional `config.md` engine declarations |
+| `scripts/llm-wiki identity status\|assign [path] [--apply]` | Inspect or deliberately assign a stable `wiki_id` shared with the registry |
 | `/wiki:audit` | Umbrella trust audit: wiki, outputs, provenance, and fresh research when needed |
 | `/wiki:audit --artifact <path>` | Audit one article or output artifact and follow its evidence chain |
 | `/wiki:audit --project <slug>` | Audit one project's outputs and upstream wiki state |
@@ -728,13 +766,23 @@ focused. The multi-wiki peek finds overlap across topics when relevant.
 - **`_index.md` navigation** — every existing wiki-managed directory has an index. Claude reads indexes first, never scans blindly.
 - **Articles are synthesized**, not copied — they explain, contextualize, cross-reference.
 - **Raw is immutable in normal workflows** — explicit user-directed retraction is the exception and removes selected raw and derived references.
+- **Typed raw namespaces** — keep high-volume streams under paths such as
+  `raw/articles/news/daily/` without creating new types or losing per-directory
+  indexes.
+- **Human-only verification** — compilation and due scans update operational
+  dates, not `verified`; changed upstream material creates a new raw revision.
+- **Auditable lint identity** — reports include engine version/commit, optional
+  corpus pins can gate CI, and stable wiki ids prevent registry paths from
+  silently resolving to the wrong corpus.
 - **Multi-wiki aware** — queries peek at sibling wiki indexes for overlap.
 - **Archive-aware** — archived topic wikis stay preserved under
   `topics/.archive/` but are hidden from default query/compile/research/collect/output
   and maintenance workflows.
 - **Dual-linking** — both `[[wikilinks]]` (Obsidian) and standard markdown links on every cross-reference. Works everywhere.
 - **Confidence scoring** — articles rated high/medium/low based on source quality and corroboration.
-- **Structural guardian** — auto-checks wiki integrity after operations, fixes trivial issues silently.
+- **Structural guardian** — checks indexes, provenance, footnotes, wikilinks,
+  and raw coverage; it auto-attaches a pointer only when one exact compiled
+  owner exists and leaves editorial ambiguity alone.
 - **Activity log** — `log.md` tracks every operation, append-only and grep-friendly, with an explicit whole-entry privacy-retraction option.
 - **Opinionated inventory** — durable tracking gets records; one-off sources stay
   ingest/query; large row-like data becomes datasets or collection ingests. Big

@@ -61,7 +61,7 @@ raw sources to update active articles.
 5.5. **Self-validation pass**: For every article touched in step 5 (new or updated), re-read the frontmatter and verify:
    - `sources:` is a non-empty list resolving to existing raw files, OR `compiled-from: conversation` is set
    - `volatility:` is set to `hot`, `warm`, or `cold`
-   - `verified:` is set to today's date
+   - `updated:` is set to today's date; `verified:` is preserved and is changed only by an explicit human verification action
    - `confidence:` is set to `high`, `medium-high`, `medium`, `medium-low`, or `low`
 
    If any check fails, halt with: `Article <path>: missing required frontmatter (<field>). See references/compilation.md § Step 5 (write protocol) and references/wiki-structure.md § Volatility Classification.` This catches silent agent skips before lint has to catch them later. Do not "fix and continue" — stop, surface the failure, let the user re-run with awareness.

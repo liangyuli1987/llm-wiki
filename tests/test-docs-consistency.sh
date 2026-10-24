@@ -91,6 +91,15 @@ for path in manifest_paths:
             fail("marketplace.json top-level version and plugin entry version differ")
 if len(set(versions.values())) > 1:
     fail("manifest versions differ: " + ", ".join(f"{k}={v}" for k, v in versions.items()))
+engine_source = (root / "scripts/llm-wiki").read_text(encoding="utf-8")
+engine_match = re.search(r'^LLM_WIKI_VERSION = "([^"]+)"$', engine_source, re.M)
+if not engine_match:
+    fail("scripts/llm-wiki has no LLM_WIKI_VERSION")
+elif versions and engine_match.group(1) not in set(versions.values()):
+    fail(
+        "lint engine version differs from manifests: "
+        f"engine={engine_match.group(1)}, manifests={sorted(set(versions.values()))}"
+    )
 
 
 # Publishing is never implied by implementation work. Keep the explicit user

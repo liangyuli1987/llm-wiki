@@ -32,7 +32,7 @@ Concretely, when evolving the schema:
 - **Renamed a frontmatter field?** Append an entry to C13's alias table (old → new). Never remove old aliases.
 - **Changed an enum value?** Add a value alias in C13. Never remove old values.
 - **Added a required field?** Add it to C2 and give it an inference rule (derive from body/filename) or a sane default.
-- **New directory under `raw/`, `wiki/`, `inventory/`, `datasets/`, or hub topic lifecycle paths?** Add it to C12/C19's allowlists and C11/C16/C17/C19's placement maps.
+- **New top-level directory under `raw/`, `wiki/`, `inventory/`, `datasets/`, or hub topic lifecycle paths?** Add it to C12/C19's allowlists and C11/C16/C17/C19's placement maps. User namespaces below an existing `raw/<type>/` are already supported and need no schema change.
 - **New project-level structure or manifest rule?** Update C8 (and projects.md). Candidate heuristics go in C9.
 
 There is no `/wiki:migrate` command and there should never be one. Lint rules **are** the schema.
@@ -91,7 +91,8 @@ There is no `/wiki:migrate` command and there should never be one. Lint rules **
   - `inventory/_index.md`: category navigation plus a nested record rollup
   - `datasets/_index.md`: dataset manifest registry
   - `output/_index.md`: loose output and active Project `WHY.md` listing
-  - leaf directories: direct-file tables
+  - raw type/namespace directories: direct files plus child namespace indexes
+  - other leaf directories: direct-file tables
 - [ ] Every contract entry appears as a local markdown link in its owning
   `_index.md`; a record rollup cannot be hidden by otherwise-valid navigation
 - [ ] No `_index.md` references a non-existent file (dead entries)
@@ -106,6 +107,15 @@ There is no `/wiki:migrate` command and there should never be one. Lint rules **
   relative links whose targets live only in the upstream source collection.
 - [ ] All "See Also" links are bidirectional (if A→B, then B→A)
 - [ ] All "Sources" links in wiki articles point to existing raw files. Links to paths with spaces should use angle-bracket markdown destinations, e.g. `[Title](<../../raw/articles/File Name.md>)`.
+- [ ] In compiled article prose, every `[^key]` reference has a matching
+  `[^key]:` definition. Missing definitions are Warnings; unused definitions
+  are Suggestions.
+- [ ] Every `[[slug]]` or `[[slug|label]]` resolves uniquely against compiled
+  article stems and `aliases:`. Missing targets are Warnings; ambiguous targets
+  are Suggestions.
+- [ ] Strip fenced blocks and inline code spans before both checks so examples
+  of footnote/wiki-link syntax are not treated as live edges. These checks are
+  report-only; lint never invents or deletes editorial links or citations.
 
 ### C4b: Source Provenance (Warning)
 
@@ -136,7 +146,15 @@ There is no `/wiki:migrate` command and there should never be one. Lint rules **
 - [ ] Every raw source is referenced by at least one wiki article's `sources` field
 - [ ] Raw sources tagged `collection-manifest` are exempt from this coverage check
 - [ ] No wiki article has an empty `sources` field (C18 covers the per-article enforcement at Warning severity; this bullet stays as the wiki-wide coverage signal at Suggestion)
-- [ ] With `--fix`, create or update `wiki/references/uncompiled-source-coverage.md` when raw sources are otherwise unreferenced. This makes the coverage gap explicit as a compilation backlog; it is not a claim that the source has been fully synthesized elsewhere.
+- [ ] For an unreferenced raw pointer whose scalar `source:` resolves to an
+  external local file, find compiled articles that cite that exact resolved
+  file in `sources:` or Markdown body links. Name all candidate owners.
+- [ ] Exactly one candidate is safely fixable by adding the raw pointer to that
+  article's `sources:`. Several candidates remain report-only for human choice.
+- [ ] With `--fix`, create or update
+  `wiki/references/uncompiled-source-coverage.md` only for truly ownerless raw
+  sources. This makes the coverage gap explicit as a compilation backlog; it
+  is not human verification or a claim of complete synthesis.
 - [ ] Articles with overlapping tags that don't link to each other via "See Also" — suggest connection
 - [ ] Orphan articles: no incoming "See Also" links from other articles
 
@@ -221,14 +239,14 @@ A `raw/` or `wiki/` file's correct path is a pure function of its frontmatter. M
 | Order | File kind | Frontmatter key | Value → directory |
 |-------|-----------|----------------|-------------------|
 | 1 | Thesis file (wiki-side) | `type: thesis` | `wiki/theses/` |
-| 2 | Raw source | `type` | `articles` → `raw/articles/`, `papers` → `raw/papers/`, `repos` → `raw/repos/`, `notes` → `raw/notes/`, `data` → `raw/data/` |
+| 2 | Raw source | `type` | `articles` → anywhere under `raw/articles/`, `papers` → anywhere under `raw/papers/`, `repos` → anywhere under `raw/repos/`, `notes` → anywhere under `raw/notes/`, `data` → anywhere under `raw/data/` |
 | 3 | Wiki article | `category` | `concept` → `wiki/concepts/`, `topic` → `wiki/topics/`, `reference` → `wiki/references/` |
 
 **Disambiguating raw `type: articles/papers/...` from wiki thesis `type: thesis`**: Rule 1 matches only when the value is literally `thesis`. Raw sources never use `thesis` as a type. A file whose frontmatter has both `category` and `type` is a wiki article — use `category` (rule 3). A file with only `type: thesis` is a thesis file (rule 1). A file with only `type` in {articles, papers, repos, notes, data} is a raw source (rule 2).
 
 **Checks**:
 
-- [ ] For every `.md` file under `raw/` and `wiki/` (excluding `_index.md` and `config.md`), compute the expected directory from frontmatter and compare to the actual directory.
+- [ ] For every `.md` file under `raw/` and `wiki/` (excluding `_index.md` and `config.md`), compute the expected top-level type/category from frontmatter and compare it to the actual path. Raw sources may retain arbitrary nested namespaces below the matching type; wiki articles remain in their exact category directory.
 - [ ] Raw sources at the hub level (not inside a topic wiki) → misplaced. Hub must only contain `wikis.json`, `_index.md`, `log.md`, and `topics/`.
 - [ ] Content directories (`raw/`, `wiki/`, `output/`, `inbox/`) at the hub level → misplaced. Move contents into a topic wiki or quarantine.
 - [ ] Files with missing or unreadable frontmatter → defer to C2 (frontmatter fix) before placement can be determined.
@@ -254,7 +272,7 @@ Any file that is not in the canonical allowlist for its location is either a use
 | `wiki/` | `_index.md`, `concepts/`, `topics/`, `references/`, `theses/` |
 | `inventory/` | `_index.md`, `items/`, `ideas/`, `candidates/`, `entities/`, `corpora/`, `views/` |
 | `datasets/` | `_index.md` + dataset slug directories |
-| `raw/<type>/` | `_index.md` + `*.md` files with valid frontmatter |
+| `raw/<type>/` and nested namespaces | `_index.md` + valid raw `*.md` files + further namespace directories, each with `_index.md` |
 | `wiki/<category>/` | `_index.md` + `*.md` files with valid frontmatter |
 | `inventory/{items,ideas,candidates,entities,corpora}/` | `_index.md` + `*.md` files with valid inventory record frontmatter |
 | `inventory/views/` | `_index.md` + derived `*.md` view files with lightweight view frontmatter |
@@ -326,7 +344,7 @@ Note: thesis files use `type: thesis`, not `category`. Do not alias `theses` to 
 
 Computes a composite freshness score (0-100) for each compiled wiki article based on source freshness, verification recency, compilation recency, and source chain integrity. Standard source-backed articles use all four dimensions at 0-25 points each. Articles with `compiled-from: conversation` have no fetchable raw source chain, so they skip source freshness and source chain integrity, compute verification recency and compilation recency at 0-25 points each, then multiply the 50-point subtotal by 2. Decay curves are scaled by the article's `volatility` tier. See `wiki-structure.md` § Freshness Score for the full formula.
 
-- [ ] For each wiki article with `volatility` and `verified` fields, compute the standard four-dimension composite score, or the rebased two-dimension score when `compiled-from: conversation`
+- [ ] For each wiki article with `volatility`, compute the standard four-dimension composite score, or the rebased two-dimension score when `compiled-from: conversation`; a missing `verified` value contributes zero verification-recency points
 - [ ] Read `freshness_threshold` from `config.md` (default: 70 if not set)
 - [ ] Flag articles scoring below the threshold
 
@@ -347,7 +365,7 @@ Flags wiki articles that lack the `volatility` field. New articles should always
 
 **Severity**: Info (not blocking — existing wikis predate this field).
 
-**Auto-fix**: Add `volatility: warm` as the safe default that puts the article into the standard monitoring cadence. Do not invent a `verified:` date unless verification was actually performed; use existing `updated:`/`verified:` dates only for freshness scoring.
+**Auto-fix**: Add `volatility: warm` as the safe default that puts the article into the standard monitoring cadence. Do not invent a `verified:` date unless verification was explicitly performed. `updated` measures compilation recency and must never substitute for verification recency.
 
 ### C16: Inventory Structure and Migration Candidates (Suggestion)
 
@@ -489,6 +507,26 @@ Validates the hub-level archive lifecycle described in `archive.md`.
   are explicit lifecycle operations.
 - Do not auto-resolve active/archive collisions.
 
+### C20: Engine Declaration and Wiki Identity (Warning/Critical)
+
+- [ ] Every lint report identifies the running checker in text and exposes an
+  `engine` object in JSON with `version` and an available Git `commit`.
+- [ ] Optional `config.md` fields `llm_wiki_version` and `checker_sha` are
+  compared independently with the running checker. Drift is a Warning.
+  `--strict-engine` makes any such drift exit non-zero even when `--fail-on`
+  would otherwise allow warnings.
+- [ ] Optional `config.md` `wiki_id` and the matching `wikis.json` entry `id`
+  must be identical when both exist. Mismatch is Critical and named wiki
+  resolution fails closed before reading or writing the target.
+- [ ] Missing engine declarations or identity on either side are valid for
+  gradual adoption. `llm-wiki identity status|assign` is the explicit,
+  dry-run-first adoption path; `assign --apply` updates the topic config and
+  its matching registry entry together.
+
+**Auto-fix**: None. Engine drift is an intentional consumer decision, and an
+identity mismatch may indicate the path points at a different corpus. Never
+choose a winner during lint.
+
 ## Auto-Fix Rules (when --fix is set)
 
 | Issue | Auto-Fix Action |
@@ -497,7 +535,8 @@ Validates the hub-level archive lifecycle described in `archive.md`.
 | File not in index | Regenerate with the declared contract; preserve root navigation and domain-specific tables |
 | Dead index entry | Regenerate with the declared contract, dropping only dead contract rows/links |
 | Statistics mismatch | Recalculate from actual file counts |
-| Raw sources with no compiled reference | Create/update `wiki/references/uncompiled-source-coverage.md` as an explicit synthesis backlog |
+| Raw pointer with one exact compiled owner | Add the raw pointer to that article's `sources:`; list but do not choose among multiple owners |
+| Raw sources with no exact compiled owner | Create/update `wiki/references/uncompiled-source-coverage.md` as an explicit synthesis backlog; never add `verified` |
 | Missing bidirectional link | Add "See Also" entry to the article missing the backlink |
 | Empty frontmatter field | Infer safe schema fields where possible: category from directory, summary from explicit summary/first paragraph, dates from existing frontmatter |
 | Near-duplicate tags | Replace all instances with the canonical form |
@@ -526,6 +565,7 @@ Validates the hub-level archive lifecycle described in `archive.md`.
 | **C17** Output looks like a dataset manifest | Warn only — suggest `/wiki:dataset migrate-output <path> --dry-run`; never auto-migrate |
 | **C18** Compiled article missing sources | **Warn only** — surface with the suggested commands. Do not auto-add `compiled-from: conversation` (that's a provenance claim that requires human judgment) and do not auto-recompile (would synthesize fake sources). |
 | **C19** Archived topic registry drift | Repair only unambiguous `wikis.json` path/status drift. Do not move topic directories during lint |
+| **C20** Engine or identity mismatch | **Never auto-fix** — engine pins and corpus identity require an explicit user decision |
 | **C19** Active/archive topic collision | Warn only — user must decide which directory wins |
 
 ## Report Format

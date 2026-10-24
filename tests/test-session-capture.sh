@@ -75,6 +75,39 @@ if [ -f "$default_hub/.sessions/state/codex/default-on.json" ]; then
 else
   log_fail "--if-enabled hook captures by default when no config exists" "missing default-on state"
 fi
+
+invalid_hub="$tmpdir/invalid-json-hub"
+mkdir -p "$invalid_hub"
+if printf 'not json' | "$SESSION" --hub "$invalid_hub" hook --harness codex --if-enabled >/dev/null 2>&1 \
+  && [ ! -e "$invalid_hub/.sessions/state" ]; then
+  log_pass "invalid hook JSON fails open without creating session state"
+else
+  log_fail "invalid hook JSON fails open without creating session state" "unexpected failure or state write"
+fi
+if printf 'not json' | "$SESSION" --hub "$invalid_hub" hook --harness codex --if-enabled --strict-json >/dev/null 2>&1; then
+  log_fail "--strict-json rejects invalid hook JSON" "unexpected zero exit"
+else
+  log_pass "--strict-json rejects invalid hook JSON"
+fi
+invalid_path="$tmpdir/not-a-directory"
+printf 'x' > "$invalid_path"
+if printf '{"session_id":"unexpected-error","hook_event_name":"PostToolUse"}' \
+  | "$SESSION" --hub "$invalid_path" hook --harness codex --if-enabled >/dev/null 2>&1; then
+  log_fail "unexpected hook failures remain visible" "unexpected zero exit"
+else
+  log_pass "unexpected hook failures remain visible"
+fi
+
+utf16_hub="$tmpdir/utf16-wiki"
+mkdir -p "$utf16_hub"
+python3 -c 'import sys; sys.stdout.buffer.write("{\"session_id\":\"utf16-input\",\"hook_event_name\":\"PostToolUse\",\"tool_name\":\"PowerShell\"}".encode("utf-16"))' \
+  | "$SESSION" --hub "$utf16_hub" hook --harness codex --if-enabled
+if [ -f "$utf16_hub/.sessions/state/codex/utf16-input.json" ]; then
+  log_pass "hook accepts BOM-marked UTF-16 JSON from Windows PowerShell"
+else
+  log_fail "hook accepts BOM-marked UTF-16 JSON from Windows PowerShell" "state was not written"
+fi
+
 "$SESSION" --hub "$default_hub" disable >/dev/null
 printf '{"session_id":"disabled","hook_event_name":"PostToolUse","cwd":"%s","tool_name":"Bash"}' "$PWD" \
   | "$SESSION" --hub "$default_hub" hook --harness codex --if-enabled

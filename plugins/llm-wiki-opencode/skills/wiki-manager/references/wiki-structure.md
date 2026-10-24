@@ -88,7 +88,10 @@ HUB/topics/<name>/
 │   ├── _index.md
 │   ├── articles/
 │   │   ├── _index.md
-│   │   └── *.md
+│   │   ├── *.md
+│   │   └── <namespace>/            # Optional, e.g. news/ or vendors/acme/
+│   │       ├── _index.md
+│   │       └── *.md
 │   ├── papers/
 │   │   ├── _index.md
 │   │   └── *.md
@@ -160,7 +163,7 @@ When a command runs, first resolve the hub path (HUB) from `~/.config/llm-wiki/c
   "default": "<HUB>",
   "wikis": {
     "hub": { "path": "<HUB>", "description": "Global knowledge base" },
-    "<topic>": { "path": "topics/<topic>", "description": "...", "status": "active" },
+    "<topic>": { "path": "topics/<topic>", "id": "optional-stable-id", "description": "...", "status": "active" },
     "<archived-topic>": {
       "path": "topics/.archive/<archived-topic>",
       "description": "...",
@@ -179,6 +182,12 @@ Topic paths inside the shared hub should be relative (`topics/<topic>`) or use
 the `<HUB>` token. Avoid storing `/Users/<name>/...` absolute paths for
 hub-owned topic wikis; those break when an iCloud wiki is opened from another
 Mac with a different home directory.
+
+`id` is optional and supports gradual adoption. A topic may declare the same
+opaque value as `wiki_id` in `config.md`. When both values exist, resolution
+must fail closed on a mismatch and hub lint reports it as critical. Missing one
+or both values remains valid. Use `llm-wiki identity status|assign`; assignment
+is dry-run-first and writes only with `--apply`.
 
 Archived topic wikis live under `topics/.archive/<slug>` and should keep their
 registry entries with `status: archived`. Normal wiki resolution, status,
@@ -273,6 +282,9 @@ title: "Wiki Title"
 description: "What this wiki is about"
 created: YYYY-MM-DD
 freshness_threshold: 70
+wiki_id: "optional-stable-id"
+llm_wiki_version: "optional-rule-set-version"
+checker_sha: "optional-git-commit"
 ---
 
 # Wiki Configuration
@@ -285,6 +297,12 @@ freshness_threshold: 70
 
 [Any wiki-specific conventions beyond defaults]
 ```
+
+The last three fields are optional. `wiki_id` binds semantic identity to the
+matching `wikis.json` entry independent of its path. `llm_wiki_version` and
+`checker_sha` document the lint engine a corpus was reviewed against. Engine
+drift is a warning by default; `llm-wiki lint --strict-engine` makes only that
+drift affect the exit status for CI.
 
 ## Topic Guide (`schema.md`) Format
 
@@ -300,9 +318,13 @@ boundaries, topic scope, and named concepts that should remain separate. This
 is an operational planning input, not a second lint schema.
 
 The guide cannot redefine deeper global primitives: the `category` vocabulary
-stays `concept`/`topic`/`reference`, the physical layout stays `raw/` →
+stays `concept`/`topic`/`reference`, raw types stay
+`articles|papers|repos|notes|data`, the compiled layout stays
 `wiki/concepts|topics|references/`, and the required-frontmatter set stays
-fixed. Additional topic fields remain optional to deterministic tooling.
+fixed. It may document optional namespaces below an existing raw type, such as
+`raw/articles/news/`; every such directory has `_index.md`, and files retain
+the top-level `type: articles`. Additional topic fields remain optional to
+deterministic tooling.
 Likewise, prose telling compilation to exclude a raw source does not satisfy C6
 coverage: the source remains visible in the uncompiled-source backlog until an
 article cites it or the user explicitly re-ingests it into the correct topic.
@@ -383,6 +405,12 @@ summary: "2-3 sentence summary"
 
 [Full content]
 ```
+
+Raw sources may be grouped into any depth of namespace below their declared
+type, for example `raw/articles/news/2026/...` or `raw/repos/vendors/acme/`.
+Namespaces do not create new raw types: the first directory below `raw/` must
+still match `type`, each namespace directory has `_index.md`, and lint never
+flattens a correctly typed nested source.
 
 ### Optional Collection Provenance
 
@@ -486,7 +514,7 @@ staleness checks) must resolve source references with this protocol:
 
 ## Volatility Classification
 
-Wiki articles carry a `volatility` field that controls how quickly their freshness score decays. The `verified` field records when a human last confirmed the article's conclusions are still accurate.
+Wiki articles carry a `volatility` field that controls how quickly their freshness score decays. The optional `verified` field records only when a human explicitly confirmed the article's conclusions after review. Compilation, lint, source fetching, and due scans update operational dates such as `updated`; they never create or advance `verified`.
 
 | Tier | Decay rate | When to use | Examples |
 |------|-----------|-------------|----------|

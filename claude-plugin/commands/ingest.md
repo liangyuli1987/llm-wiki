@@ -1,6 +1,6 @@
 ---
 description: "Ingest source material into an active wiki. Accepts URLs, file paths, PDFs, freeform text, or processes the inbox. Supports tweets via Grok MCP."
-argument-hint: "<url|filepath|\"text\"> [--type articles|papers|repos|notes|data] [--title \"Title\"] [--inbox] [--keep] [--wiki <name>] [--local] [--auto-classify] [--new-topic <name>] [--project <slug>] [--include-archived]"
+argument-hint: "<url|filepath|\"text\"> [--type articles|papers|repos|notes|data] [--raw-subdir <path>] [--title \"Title\"] [--inbox] [--keep] [--wiki <name>] [--local] [--auto-classify] [--new-topic <name>] [--project <slug>] [--include-archived]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls:*), Bash(wc:*), Bash(date:*), Bash(mv:*), Bash(mkdir:*), Bash(basename:*), Bash(file:*), Bash(curl:*), Bash(mktemp:*), Bash(rm:*), Bash(pdftotext:*), Bash(python3:*), WebFetch, WebSearch
 ---
 
@@ -76,6 +76,11 @@ There is no ambient project focus — pass `--project` explicitly when you want 
 - **--inbox**: Process all files in the wiki's `inbox/` directory
 - **--keep**: When processing inbox, keep originals (move to .processed/ instead of deleting)
 - **--type**: Force source type (articles, papers, repos, notes, data). Default: auto-detect.
+- **--raw-subdir <path>**: Place the source in an optional namespace below its
+  type, such as `--type articles --raw-subdir news/daily`. Reject absolute
+  paths, `.`/`..`, hidden segments, and paths whose first segment repeats or
+  changes the type. Create `_index.md` in every new namespace directory. The
+  source frontmatter `type` remains the top-level raw type.
 - **--title**: Override extracted title
 - **--auto-classify**: For single items, classify into the best-matching topic wiki instead of requiring `--wiki`. Always active for `--inbox` when no `--wiki` is set.
 - **--include-archived**: Explicitly allow ingestion into an archived target
@@ -186,7 +191,9 @@ When `--inbox` is set and no `--wiki` was provided, classify items as a batch:
 ### For all sources
 
 1. Generate slug: `YYYY-MM-DD-descriptive-slug.md`
-2. Write source file to `raw/{type}/` with proper frontmatter:
+2. Write the source to `raw/{type}/` or
+   `raw/{type}/{raw-subdir}/` when explicitly requested, with proper
+   frontmatter:
    ```
    ---
    title: "Title"
@@ -197,7 +204,10 @@ When `--inbox` is set and no `--wiki` was provided, classify items as a batch:
    summary: "2-3 sentence summary"
    ---
    ```
-3. Update `raw/{type}/_index.md`, `raw/_index.md`, and master `_index.md` (best-effort — if skipped or interrupted, the next read will rebuild from file frontmatter. See `references/indexing.md` Derived Index Protocol.)
+3. Update the destination `_index.md`, every containing raw namespace/type
+   index, `raw/_index.md`, and master `_index.md` (best-effort — if skipped or
+   interrupted, the next read will rebuild from file frontmatter. See
+   `references/indexing.md` Derived Index Protocol.)
 4. Append to `log.md`: `## [YYYY-MM-DD] ingest | Title (raw/type/slug.md)`
 7. Report: what was ingested, where saved, detected tags
 8. Check uncompiled source count. If 5+, suggest `/wiki:compile`

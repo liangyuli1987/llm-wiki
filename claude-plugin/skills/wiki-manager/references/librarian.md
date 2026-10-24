@@ -346,4 +346,4 @@ Append-only librarian activity log at `.librarian/log.md`:
 | `refresh` | Re-fetch sources, compare changes, offer recompilation | Librarian flags, then delegates to refresh |
 | `compile` | Transform raw sources into wiki articles | Librarian reviews compiled output, never compiles |
 
-When the librarian flags an article as stale and the user confirms, it delegates to the refresh protocol in `commands/refresh.md` for that article.
+When the librarian flags an article as stale and the user confirms, it delegates to the shared protocol in `references/refresh.md` for that article. That protocol is available in every runtime package.

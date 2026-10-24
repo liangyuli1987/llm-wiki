@@ -14,6 +14,13 @@ Ingestion converts external material into a standardized raw source file in the 
 | notes | raw/notes/ | Freeform text, tweets, no URL |
 | data | raw/data/ | small .csv, .json, .tsv URLs or files, dataset references |
 
+An explicit `--raw-subdir <relative/path>` may namespace a single source below
+its selected type, for example `raw/articles/news/daily/`. The value must be a
+safe relative path with no empty, hidden, `.` or `..` segments and must not
+repeat/change the top-level type. Every namespace directory has `_index.md`;
+frontmatter continues to use the top-level type. Topic-guide conventions may
+recommend namespaces, but they do not create new raw types.
+
 If the data is large, mutable, remote, sensitive, or better queried in its
 native format, use the dataset registry (`references/datasets.md`) instead of
 copying it into `raw/data/`.
@@ -40,7 +47,7 @@ upstream interfaces:
 
 | Adapter | Use for | Primary access path |
 |---------|---------|---------------------|
-| `git` | GitHub/GitLab/local repos containing specs, proposals, docs | `git clone --depth 1`, `git ls-tree`, raw file reads |
+| `git` | GitHub/GitLab/local repos containing specs, proposals, docs | `git clone`, `git rev-parse`, `git ls-tree`, raw file reads or a manifest-only pin |
 | `mediawiki-dump` | Full MediaWiki imports or large snapshots | Official `.xml`, `.xml.bz2`, `.xml.gz` dumps |
 | `mediawiki-api` | Targeted MediaWiki imports or dumpless sites | `api.php` with `allpages` + `revisions` |
 | `csv-messages` | CSV/TSV/JSON/JSONL message archives such as mailing-list exports | Python stdlib `csv`/`json`, one child source per message row/object |
@@ -116,6 +123,15 @@ Use Git for repositories such as `bitcoin/bips`; do not scrape GitHub HTML.
 5. For BIP-style repos, prioritize root `bip-####.mediawiki` and `bip-####.md`
    files. Parse proposal headers such as `BIP`, `Layer`, `Title`, `Authors`,
    `Status`, `Type`, `Requires`, `License`, and `Discussion`.
+
+Optional `--manifest-only` mode keeps Git-owned file bodies in Git instead of
+duplicating them under `raw/articles/`. It accepts `--revision <ref>` (default
+`HEAD`), resolves it to a full commit SHA, applies the same path filters, and
+writes one immutable `raw/repos/` manifest with a `Path | Blob SHA` body table
+plus `manifest_only: true`. Use a local repository or a full clone, not a
+shallow clone, so the requested revision can be validated. Compiled articles
+cite that manifest in `sources:` and may locate claims as
+`<collection>@<commit>:<path>`. Each later revision creates a new manifest.
 
 For BIPs, publication in the repo is provenance for the proposal text, not proof
 of adoption or consensus. Compilation must preserve that distinction.
@@ -331,9 +347,11 @@ The `inbox/` directory is a drop zone. Users dump files there via Finder, `cp`, 
 
 After writing each source file, update indexes in order:
 
-1. `raw/{type}/_index.md` — add row to Contents table
-2. `raw/_index.md` — add row to Contents table
-3. `_index.md` (master) — increment source count, add to Recent Changes
+1. Destination `_index.md` — add the source row
+2. Every containing namespace/type `_index.md` — add child namespace pointers
+   or direct rows according to the directory contract
+3. `raw/_index.md` — retain the top-level type pointer
+4. `_index.md` (master) — increment source count, add to Recent Changes
 
 ## Batch Ingestion
 
