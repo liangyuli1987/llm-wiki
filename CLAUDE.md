@@ -46,6 +46,7 @@ git -C ~/.claude/plugins/marketplaces/llm-wiki remote set-url origin https://git
 ./tests/test-session-concurrency.sh # concurrent session-state regression
 ./tests/test-codex-sync.sh         # Codex plugin mirror matches Claude source
 ./tests/test-opencode-sync.sh     # OpenCode plugin mirror matches Claude source
+./tests/test-dsh-sync.sh          # DeepSeek Harness skill mirror + isolated install
 ./tests/test-token-benchmarks.sh  # budgets + fake Codex/Claude protocol fixtures
 ./tests/test-query-lite-sync.sh   # shared query profile + read-only DS4 launcher
 ```
@@ -91,11 +92,15 @@ Requires `ANTHROPIC_API_KEY`. Costs ~$2-5 per run.
 - **Changed user-facing command docs or versions**: update README command rows and all plugin/marketplace manifest versions together, then run `test-docs-consistency.sh`.
 - **Changed the fuzzy router**: add or update test cases in `promptfooconfig.yaml` covering the new routing behavior plus negative controls.
 - **Added a new reference file**: `test-plugin-validate.sh` has three `for ref in ...` loops (Claude-side existence plus Codex/OpenCode copied-reference validation) — add the new filename to all three.
-- **Changed `scripts/llm-wiki`**: run both plugin sync scripts so the bundled
-  `bin/llm-wiki` copies for Claude, Codex, and OpenCode match the source helper.
+- **Changed `scripts/llm-wiki`**: run all runtime sync scripts so the bundled
+  `bin/llm-wiki` copies for Claude, Codex, OpenCode, and DeepSeek Harness match
+  the source helper.
 - **Changed `references/query-lite.md`**: run `scripts/sync-query-lite-profile.sh`, `scripts/sync-codex-plugin.sh`, and `scripts/sync-opencode-plugin.sh`, then run `tests/test-query-lite-sync.sh` and the two mirror sync tests.
 - **Changed directory structure** (new `raw/` or `wiki/` subdirectory): update `test-structure.sh` C1 directory list and C11 placement checks. Update the golden wiki fixture if needed.
-- **Edited `claude-plugin/skills/wiki-manager/`**: both `test-codex-sync.sh` and `test-opencode-sync.sh` will fail until you re-run both sync scripts and commit `plugins/`. Never edit `plugins/llm-wiki/` or `plugins/llm-wiki-opencode/` by hand — they are generated. Both targets get copied references so cached packages and raw GitHub URLs remain self-contained.
+- **Edited `claude-plugin/skills/wiki-manager/`**: the Codex, OpenCode, and DSH
+  sync tests fail until you run all three sync scripts and commit `plugins/`.
+  Never hand-edit the generated package trees; each gets copied references so
+  cached packages and raw GitHub URLs remain self-contained.
 - **Added a runtime-specific text rewrite to a sync script**: update the corresponding sync script's SKILL.md replacement list. References are runtime-neutral and shared verbatim — do not add per-file replacements there.
 - **Changed Codex install docs or bootstrap flow**: run `./tests/test-codex-runtime.sh` to verify a user-scoped install materializes the plugin cache, resolves `@wiki`, and installs `$wiki-query` as explicit-only from a clean scratch Codex home without an interactive `/plugins` step. Codex 0.144 reads plugin enablement from user config, not project config; the test also guards the unsupported project-scope path.
 
@@ -132,10 +137,16 @@ plugins/llm-wiki-opencode/      — generated OpenCode packaging mirror (do NOT 
     references/*.md             — copied from claude-plugin/skills/wiki-manager/references
   README.md                     — OpenCode install instructions
   skills/wiki-query/SKILL.md    — best-effort compact read-only preset
+plugins/llm-wiki-dsh/           — generated DeepSeek Harness skill package (do NOT hand-edit)
+  skills/wiki/SKILL.md          — `/wiki` filesystem skill
+  skills/wiki/references/*.md   — copied runtime-neutral references
+  skills/wiki/bin/llm-wiki      — bundled deterministic helper
 profiles/query-lite/SKILL.md    — portable generated read-only query profile
 .agents/plugins/marketplace.json — repo-local Codex marketplace entry
 scripts/sync-codex-plugin.sh    — regenerates plugins/llm-wiki/ from claude-plugin/
 scripts/sync-opencode-plugin.sh — regenerates plugins/llm-wiki-opencode/ from claude-plugin/
+scripts/sync-dsh-plugin.sh      — regenerates plugins/llm-wiki-dsh/ from claude-plugin/
+scripts/install-deepseek-harness.sh — installs the generated `/wiki` skill under DSH_HOME
 scripts/sync-query-lite-profile.sh — regenerates profiles/query-lite/ from the canonical reference
 scripts/pi-wiki-query           — generic read-only Pi launcher
 scripts/pi-ds4-wiki-query       — isolated read-only Pi/DS4 launcher

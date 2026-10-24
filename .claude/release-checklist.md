@@ -33,6 +33,7 @@ Standard process for testing and shipping a new version of the llm-wiki plugin.
    - `.claude-plugin/marketplace.json`
    - `claude-plugin/.claude-plugin/plugin.json`
    - `plugins/llm-wiki/.codex-plugin/plugin.json`
+   - `LLM_WIKI_VERSION` in `scripts/llm-wiki`
 
 ## Test
 
@@ -40,6 +41,7 @@ Standard process for testing and shipping a new version of the llm-wiki plugin.
    ```bash
    ./scripts/sync-codex-plugin.sh
    ./scripts/sync-opencode-plugin.sh
+   ./scripts/sync-dsh-plugin.sh
    ./tests/test-plugin-validate.sh
    ./tests/test-docs-consistency.sh
    ./tests/test-structure.sh
@@ -47,6 +49,7 @@ Standard process for testing and shipping a new version of the llm-wiki plugin.
    ./tests/test-local-cli-adapters.sh
    ./tests/test-codex-sync.sh
    ./tests/test-opencode-sync.sh
+   ./tests/test-dsh-sync.sh
    ./tests/test-codex-runtime.sh
    ```
 
@@ -62,6 +65,10 @@ Standard process for testing and shipping a new version of the llm-wiki plugin.
 5. **Verify OpenCode skill loads** — start OpenCode with the instruction file and ask "what wiki commands do you know?"
    - Load via: `"instructions": ["plugins/llm-wiki-opencode/skills/wiki-manager/SKILL.md"]` in `opencode.json`
    - Verify web search works with `OPENCODE_ENABLE_EXA=1`
+
+5a. **Verify DeepSeek Harness packaging** — run `./tests/test-dsh-sync.sh`.
+   - When a local Harness runtime exists, run `./scripts/install-deepseek-harness.sh --verify` and invoke `/wiki`.
+   - Do not require a Harness runtime in CI; the isolated install test verifies the documented filesystem-skill contract.
 
 6. **Test the changed feature** — whatever was added/fixed in this release:
    - Invoke the relevant `/wiki:*` subcommand
@@ -145,6 +152,7 @@ Standard process for testing and shipping a new version of the llm-wiki plugin.
 - Claude marketplace plugin name: `wiki@llm-wiki`
 - Codex plugin invocation name: `@wiki`
 - OpenCode: loaded via `"instructions"` in `opencode.json` or copied to `~/.config/opencode/AGENTS.md`
+- DeepSeek Harness skill path: `${DSH_HOME:-$HOME/.dsh}/skills/wiki/`
 - Claude plugin cache path: `~/.claude/plugins/cache/llm-wiki/wiki/<version>/`
 - Claude marketplace repo: `~/.claude/plugins/marketplaces/llm-wiki/`
 - Codex plugin enablement config path: `~/.codex/config.toml`

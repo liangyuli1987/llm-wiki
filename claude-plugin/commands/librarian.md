@@ -124,7 +124,7 @@ After all articles are scored:
    → Verify still accurate? (y/n/skip)
 ```
 
-5. For articles the user selects to refresh: invoke the refresh protocol from `commands/refresh.md` for that article.
+5. For articles the user selects to refresh: invoke the shared protocol from `references/refresh.md` for that article.
 6. For articles the user selects to verify: update `verified:` to today in the article's frontmatter.
 
 #### 3b. Topic-Guide Conventions Pass

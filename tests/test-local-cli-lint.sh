@@ -678,10 +678,276 @@ if [ "$coverage_rc" -eq 0 ] \
   && grep -q "Result: PASS" <<<"$coverage_output" \
   && [ -f "$coverage_repair/wiki/references/uncompiled-source-coverage.md" ] \
   && grep -q "raw/articles/2026-01-05-uncompiled-source.md" "$coverage_repair/wiki/references/uncompiled-source-coverage.md" \
+  && ! grep -q '^verified:' "$coverage_repair/wiki/references/uncompiled-source-coverage.md" \
   && grep -q "Uncompiled Source Coverage" "$coverage_repair/wiki/references/_index.md"; then
   log_pass "--fix creates explicit coverage reference for uncompiled raw sources"
 else
   log_fail "--fix creates explicit coverage reference for uncompiled raw sources" "$coverage_output"
+fi
+
+coverage_owner="$tmpdir/coverage-owner"
+mkdir "$coverage_owner" "$tmpdir/upstream-owner"
+cp -R "$GOLDEN/." "$coverage_owner/"
+printf '# Exact upstream source\n' > "$tmpdir/upstream-owner/exact.md"
+cat > "$coverage_owner/raw/articles/2026-01-06-pointer.md" <<'EOF'
+---
+title: "Exact Pointer"
+source: ../../../upstream-owner/exact.md
+type: articles
+ingested: 2026-01-06
+tags: [coverage]
+summary: "Pointer to an exact local source cited by one compiled article."
+---
+
+# Exact Pointer
+EOF
+cat >> "$coverage_owner/wiki/concepts/sample-concept.md" <<'EOF'
+
+[Exact upstream source](../../../upstream-owner/exact.md)
+EOF
+expect_failure_contains \
+  "coverage finding names the unique compiled owner" \
+  "sample-concept.md cites its underlying source directly" \
+  "$CLI" lint "$coverage_owner"
+set +e
+coverage_owner_output="$("$CLI" lint --fix "$coverage_owner" 2>&1)"
+coverage_owner_rc=$?
+set -e
+if [ "$coverage_owner_rc" -eq 0 ] \
+  && grep -q 'raw/articles/2026-01-06-pointer.md' "$coverage_owner/wiki/concepts/sample-concept.md" \
+  && [ ! -e "$coverage_owner/wiki/references/uncompiled-source-coverage.md" ]; then
+  log_pass "--fix attaches a unique pointer to its exact compiled owner"
+else
+  log_fail "--fix attaches a unique pointer to its exact compiled owner" "$coverage_owner_output"
+fi
+
+coverage_ambiguous="$tmpdir/coverage-ambiguous"
+mkdir "$coverage_ambiguous" "$tmpdir/upstream-ambiguous"
+cp -R "$GOLDEN/." "$coverage_ambiguous/"
+printf '# Shared upstream source\n' > "$tmpdir/upstream-ambiguous/shared.md"
+cat > "$coverage_ambiguous/raw/articles/2026-01-06-pointer.md" <<'EOF'
+---
+title: "Shared Pointer"
+source: ../../../upstream-ambiguous/shared.md
+type: articles
+ingested: 2026-01-06
+tags: [coverage]
+summary: "Pointer to a local source cited by two compiled articles."
+---
+
+# Shared Pointer
+EOF
+for article in \
+  "$coverage_ambiguous/wiki/concepts/sample-concept.md" \
+  "$coverage_ambiguous/wiki/references/sample-reference.md"; do
+  printf '\n[Shared upstream source](../../../upstream-ambiguous/shared.md)\n' >> "$article"
+done
+set +e
+coverage_ambiguous_output="$("$CLI" lint --fix "$coverage_ambiguous" 2>&1)"
+coverage_ambiguous_rc=$?
+set -e
+if [ "$coverage_ambiguous_rc" -ne 0 ] \
+  && grep -q 'multiple possible compiled owners' <<<"$coverage_ambiguous_output" \
+  && ! grep -q 'raw/articles/2026-01-06-pointer.md' "$coverage_ambiguous/wiki/concepts/sample-concept.md" \
+  && [ ! -e "$coverage_ambiguous/wiki/references/uncompiled-source-coverage.md" ]; then
+  log_pass "--fix leaves ambiguous coverage ownership for human choice"
+else
+  log_fail "--fix leaves ambiguous coverage ownership for human choice" "$coverage_ambiguous_output"
+fi
+
+nested_raw="$tmpdir/nested-raw"
+mkdir "$nested_raw"
+cp -R "$GOLDEN/." "$nested_raw/"
+mkdir -p "$nested_raw/raw/articles/news/daily"
+mv "$nested_raw/raw/articles/2026-01-01-sample-article.md" \
+  "$nested_raw/raw/articles/news/daily/2026-01-01-sample-article.md"
+python3 - "$nested_raw" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+for path in root.rglob("*.md"):
+    text = path.read_text(encoding="utf-8")
+    text = text.replace(
+        "raw/articles/2026-01-01-sample-article.md",
+        "raw/articles/news/daily/2026-01-01-sample-article.md",
+    ).replace(
+        "../../raw/articles/2026-01-01-sample-article.md",
+        "../../raw/articles/news/daily/2026-01-01-sample-article.md",
+    )
+    path.write_text(text, encoding="utf-8")
+PY
+set +e
+nested_raw_output="$("$CLI" lint --fix "$nested_raw" 2>&1)"
+nested_raw_rc=$?
+set -e
+if [ "$nested_raw_rc" -eq 0 ] \
+  && [ -f "$nested_raw/raw/articles/news/_index.md" ] \
+  && [ -f "$nested_raw/raw/articles/news/daily/_index.md" ] \
+  && [ -f "$nested_raw/raw/articles/news/daily/2026-01-01-sample-article.md" ] \
+  && grep -q 'news/_index.md' "$nested_raw/raw/articles/_index.md" \
+  && grep -q 'daily/_index.md' "$nested_raw/raw/articles/news/_index.md"; then
+  log_pass "nested raw namespaces retain type placement and receive navigable indexes"
+else
+  log_fail "nested raw namespaces retain type placement and receive navigable indexes" "$nested_raw_output"
+fi
+
+link_integrity="$tmpdir/link-integrity"
+mkdir "$link_integrity"
+cp -R "$GOLDEN/." "$link_integrity/"
+cat >> "$link_integrity/wiki/concepts/sample-concept.md" <<'EOF'
+
+This claim cites a missing definition.[^missing]
+
+[^orphan]: This definition has no reference.
+
+See [[missing-article|Missing Article]].
+
+Inline examples are ignored: `[[code-only-link]]` and `[^code-only]`.
+
+```markdown
+[[fenced-code-only]]
+[^fenced-code]: not article prose
+```
+EOF
+set +e
+link_integrity_output="$("$CLI" lint "$link_integrity" 2>&1)"
+link_integrity_rc=$?
+set -e
+if [ "$link_integrity_rc" -ne 0 ] \
+  && grep -q 'Footnote \[\^missing\] is referenced but never defined' <<<"$link_integrity_output" \
+  && grep -q 'Footnote \[\^orphan\] is defined but never referenced' <<<"$link_integrity_output" \
+  && grep -q 'Wiki-link \[\[missing-article' <<<"$link_integrity_output" \
+  && ! grep -q 'code-only-link\|fenced-code-only\|code-only\|fenced-code' <<<"$link_integrity_output"; then
+  log_pass "lint reports broken footnotes and wikilinks while ignoring code examples"
+else
+  log_fail "lint reports broken footnotes and wikilinks while ignoring code examples" "$link_integrity_output"
+fi
+
+engine_wiki="$tmpdir/engine-wiki"
+mkdir "$engine_wiki"
+cp -R "$GOLDEN/." "$engine_wiki/"
+set +e
+engine_text="$("$CLI" lint "$engine_wiki" 2>&1)"
+engine_text_rc=$?
+engine_json="$("$CLI" lint "$engine_wiki" --json 2>&1)"
+engine_json_rc=$?
+set -e
+if [ "$engine_text_rc" -eq 0 ] \
+  && grep -q '^Engine: 1.0.0' <<<"$engine_text" \
+  && [ "$engine_json_rc" -eq 0 ] \
+  && python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["engine"]["version"] == "1.0.0"; assert "commit" in data["engine"]' <<<"$engine_json"; then
+  log_pass "lint text and JSON reports identify the checker engine"
+else
+  log_fail "lint text and JSON reports identify the checker engine" "$engine_text $engine_json"
+fi
+
+sed -i.bak '/^created:/a\
+llm_wiki_version: 0.25.1' "$engine_wiki/config.md"
+rm -f "$engine_wiki/config.md.bak"
+set +e
+engine_relaxed="$("$CLI" lint "$engine_wiki" --fail-on critical 2>&1)"
+engine_relaxed_rc=$?
+engine_strict="$("$CLI" lint "$engine_wiki" --fail-on critical --strict-engine 2>&1)"
+engine_strict_rc=$?
+set -e
+if [ "$engine_relaxed_rc" -eq 0 ] \
+  && grep -q 'declares llm_wiki_version' <<<"$engine_relaxed" \
+  && [ "$engine_strict_rc" -ne 0 ]; then
+  log_pass "optional engine declarations warn locally and gate with --strict-engine"
+else
+  log_fail "optional engine declarations warn locally and gate with --strict-engine" "$engine_relaxed $engine_strict"
+fi
+
+unverified_wiki="$tmpdir/unverified-wiki"
+mkdir "$unverified_wiki"
+cp -R "$GOLDEN/." "$unverified_wiki/"
+sed -i.bak '/^verified:/d' "$unverified_wiki/wiki/concepts/sample-concept.md"
+rm -f "$unverified_wiki/wiki/concepts/sample-concept.md.bak"
+set +e
+unverified_output="$("$CLI" lint "$unverified_wiki" 2>&1)"
+unverified_rc=$?
+set -e
+if [ "$unverified_rc" -eq 0 ] \
+  && grep -q 'has not been human-verified' <<<"$unverified_output" \
+  && grep -q '`updated` is not treated as verification' <<<"$unverified_output"; then
+  log_pass "freshness never substitutes updated for human verification"
+else
+  log_fail "freshness never substitutes updated for human verification" "$unverified_output"
+fi
+
+identity_hub="$tmpdir/identity-hub"
+mkdir -p "$identity_hub/topics/identity-topic"
+cp -R "$GOLDEN/." "$identity_hub/topics/identity-topic/"
+printf '# Hub\n' > "$identity_hub/_index.md"
+printf '# Log\n' > "$identity_hub/log.md"
+cat > "$identity_hub/wikis.json" <<'JSON'
+{
+  "default": "<HUB>",
+  "wikis": {
+    "hub": {"path": "<HUB>", "description": "Hub"},
+    "identity-topic": {"path": "topics/identity-topic", "description": "Identity topic"}
+  },
+  "local_wikis": []
+}
+JSON
+set +e
+identity_dry="$("$CLI" identity assign "$identity_hub/topics/identity-topic" --hub "$identity_hub" --id test-wiki-identity --json 2>&1)"
+identity_dry_rc=$?
+identity_dry_clean=0
+if ! grep -q '^wiki_id:' "$identity_hub/topics/identity-topic/config.md" \
+  && ! grep -q '"id": "test-wiki-identity"' "$identity_hub/wikis.json"; then
+  identity_dry_clean=1
+fi
+identity_apply="$("$CLI" identity assign "$identity_hub/topics/identity-topic" --hub "$identity_hub" --id test-wiki-identity --apply --json 2>&1)"
+identity_apply_rc=$?
+identity_status="$("$CLI" identity status --hub "$identity_hub" --wiki identity-topic --json 2>&1)"
+identity_status_rc=$?
+set -e
+if [ "$identity_dry_rc" -eq 0 ] \
+  && [ "$identity_dry_clean" -eq 1 ] \
+  && [ "$identity_apply_rc" -eq 0 ] \
+  && [ "$identity_status_rc" -eq 0 ] \
+  && python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["status"] == "match"; assert data["wiki_id"] == "test-wiki-identity"' <<<"$identity_status" \
+  && grep -q '"id": "test-wiki-identity"' "$identity_hub/wikis.json"; then
+  log_pass "identity assign is dry-run-first and binds config to its registry entry"
+else
+  log_fail "identity assign is dry-run-first and binds config to its registry entry" "$identity_dry $identity_apply $identity_status"
+fi
+python3 - "$identity_hub/wikis.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["wikis"]["identity-topic"]["id"] = "wrong-wiki-identity"
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+expect_failure_contains \
+  "hub lint rejects a registry-to-config identity mismatch" \
+  "registry identity mismatch" \
+  "$CLI" lint "$identity_hub"
+expect_failure_contains \
+  "named resolution fails closed on identity mismatch" \
+  "registry identity mismatch" \
+  "$CLI" lint --hub "$identity_hub" --wiki identity-topic
+set +e
+identity_mismatch_status="$("$CLI" identity status --hub "$identity_hub" --wiki identity-topic --json 2>&1)"
+identity_mismatch_status_rc=$?
+set -e
+identity_repair="$("$CLI" identity assign --hub "$identity_hub" --wiki identity-topic --id repaired-wiki-identity --replace --apply --json 2>&1)"
+identity_repair_rc=$?
+identity_repaired_status="$("$CLI" identity status --hub "$identity_hub" --wiki identity-topic --json 2>&1)"
+identity_repaired_status_rc=$?
+if [ "$identity_mismatch_status_rc" -eq 1 ] \
+  && [ "$identity_repair_rc" -eq 0 ] \
+  && [ "$identity_repaired_status_rc" -eq 0 ] \
+  && python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["status"] == "mismatch"' <<<"$identity_mismatch_status" \
+  && python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["status"] == "match"; assert data["wiki_id"] == "repaired-wiki-identity"' <<<"$identity_repaired_status"; then
+  log_pass "identity commands can inspect and explicitly repair a mismatch"
+else
+  log_fail "identity commands can inspect and explicitly repair a mismatch" "$identity_mismatch_status $identity_repair $identity_repaired_status"
 fi
 
 hub_scope="$tmpdir/hub-scope"

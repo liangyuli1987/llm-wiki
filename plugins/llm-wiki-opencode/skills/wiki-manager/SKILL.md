@@ -157,7 +157,7 @@ query, use the Audit workflow instead of treating it as plain Q&A.
 
 ### Ingestion
 See [references/ingestion.md](references/ingestion.md).
-Flow: Source (URL/file/text/tweet/inbox) → fetch/read → extract metadata → write to `raw/{type}/` → update indexes → suggest compile if many uncompiled.
+Flow: Source (URL/file/text/tweet/inbox) → fetch/read → extract metadata → write to `raw/{type}/` or an existing topic-defined namespace below that type → update every containing index → suggest compile if many uncompiled. Nested folders never create a new raw `type`.
 
 ### Collection Ingestion
 See [references/ingestion.md](references/ingestion.md) § Collection Ingestion.
@@ -252,6 +252,14 @@ wikis can adopt one with `llm-wiki schema adopt` or `llm-wiki lint --fix`. Libra
 must not rewrite `schema.md` without explicit user acceptance.
 Librarian is the article-health advisor; it does not replace lint's structural
 checks or audit's broader trust review.
+
+### Refresh
+See [references/refresh.md](references/refresh.md).
+Flow: Select due articles → compare current upstream material with immutable raw
+revisions → present source-by-source decisions → create a new raw revision and
+bounded article update only after approval. `verified` is written only after an
+explicit human confirmation; due scans, compilation, and fetches never advance
+it.
 
 ### Audit
 See [references/audit.md](references/audit.md).
