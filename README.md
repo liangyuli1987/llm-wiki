@@ -9,6 +9,10 @@
 
 [llm-wiki.net](https://llm-wiki.net/) · [@LLMWIKI on X](https://x.com/LLMWIKI) · [github.com/nvk/llm-wiki](https://github.com/nvk/llm-wiki)
 
+- BTC bc1p9l6n4m6kyql0wxm6nu46ekw9wue2c85hk8yuw5z5487g2uzr0xcsqn8k75
+- ETH 0x103564a1c1fc3774D34050e5397869387e4cbEF6
+- SOL 2hRuXsz9gS5PrmdU6kxrFCz95ecMtTRZcX3abiow3udY
+
 LLM-compiled knowledge bases for any AI agent. Capture rough Ideas, research and shape them, then explicitly promote approved briefs into delivery Projects. Also includes parallel research, collector catalogs, session memory, source ingestion, compilation, audits, querying, and artifact generation. Ships for Claude Code, OpenAI Codex, DeepSeek Harness, OpenCode, and portable agents. Obsidian-compatible.
 
 ---
